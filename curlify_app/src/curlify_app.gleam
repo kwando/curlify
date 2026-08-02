@@ -257,6 +257,21 @@ fn view(model: Model) {
         |> contour_to_lustre
         |> element.fragment,
     ),
+
+    html.footer(
+      [
+        class(
+          "text-center text-sm text-gray-500 mt-12 pt-4 border-t border-gray-700",
+        ),
+      ],
+      [
+        html.text("© 2026 kwando"),
+        html.br([]),
+        html.text(
+          "Visitor stats collected via Umami — no cookies, no personal data.",
+        ),
+      ],
+    ),
   ])
 }
 
@@ -279,6 +294,7 @@ fn show_example_button(model: Model) -> element.Element(Msg) {
       attribute.classes([
         #("dimmed", model.input != "" && model.example == None),
       ]),
+      attribute.data("umami-event", "example-buttom-pressed"),
       event.on_click(UserClickerShowExampleButton),
     ],
     [

@@ -38,6 +38,11 @@ jobs:
       - name: Fix asset paths for sub-path deployment
         run: sed -i 's|href="/|href="./|g; s|src="/|src="./|g' curlify_app/dist/index.html
 
+      - name: Add Umami analytics
+        run: |
+          sed -i 's|</head>|<script defer src="https://analytics.merciless.me/script.js" data-website-id="8e6be986-64a0-434f-9a9e-e246780414ec"></script></head>|' \
+            curlify_app/dist/index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
