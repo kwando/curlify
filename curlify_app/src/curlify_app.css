@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+html,
+body {
+  --amber-glow: #faa000ff;
+  --coffee-bean: #251817ff;
+  --dark-goldenrod: #c48205ff;
+  --golden-orange: #e89700ff;
+  --bright-amber: #f5c800ff;
+  --bright-amber-2: #fcce00ff;
+  --dark-coffee: #382622ff;
+  --coffee-bean-2: #2e1f1eff;
+
+  @apply text-amber-100/80 max-w-300 mx-auto;
+
+  background-color: var(--coffee-bean);
+}
+
+textarea {
+  @apply border rounded rounded-sm border-amber-900 w-full  p-4 bg-black/20 font-mono min-h-45;
+  border-color: var(--amber-glow);
+  color: var(--bright-amber);
+  outline: none;
+  @apply bg-amber-400/10;
+  field-sizing: content;
+}
+
+pre {
+  @apply border rounded rounded-sm whitespace-pre-wrap;
+  border-color: var(--golden-orange);
+  border: none;
+  @apply bg-black/35;
+}
+
+.btn {
+  background-color: var(--amber-glow);
+  @apply px-4 py-2 font-mono cursor-pointer rounded rounded-xs font-bold uppercase text-sm;
+  color: var(--coffee-bean-2);
+  &.dimmed {
+    filter: brightness(50%);
+  }
+  &.outline {
+    background-color: transparent;
+    color: var(--dark-goldenrod);
+  }
+}
+
+/* Gleam styling */
+.gl-string {
+  color: var(--bright-amber-2);
+}
+.gl-keyword {
+  color: var(--amber-glow);
+}
+.gl-variant {
+  color: var(--bright-amber);
+}
+.gl-module {
+  color: var(--golden-orange);
+}
+.gl-operator {
+  color: var(--dark-goldenrod);
+}
+.gl-other {
+  color: var(--dark-goldenrod);
+}
+.gl-function {
+  color: var(--golden-orange);
+}
+
+.prompt {
+  text-shadow:
+    0 0 0.25em orange,
+    0 0 2em orange;
+}
