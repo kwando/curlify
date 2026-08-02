@@ -12,6 +12,7 @@ import gleam/uri
 /// Escape a string for POSIX shell using single quotes.
 /// Inside single quotes, everything is literal except ' itself.
 /// To include a literal ': close quote, add \', open quote again.
+@internal
 pub fn shell_escape(input: String) -> String {
   "'" <> string.replace(input, "'", "'\\''") <> "'"
 }
