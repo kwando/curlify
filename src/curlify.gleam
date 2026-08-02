@@ -307,7 +307,7 @@ fn body_to_request_string(body: Body) -> String {
   }
 }
 
-/// The inverse of `from_request`. Reconstructs a gleam_http Request
+/// The inverse of `from_request`. Reconstructs a `gleam/http/request.Request`
 /// from the HTTP-relevant fields of a Curl. If the Curl has `basic_auth`
 /// set, an `Authorization: Basic` header is added.
 pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
