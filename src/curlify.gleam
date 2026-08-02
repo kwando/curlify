@@ -1,3 +1,7 @@
+//// Utilitys for generating `curl` commands. Use the builder api, convert a `gleam_http` request or
+//// parse a curl command line string.
+////
+
 import gleam/bit_array
 import gleam/function
 import gleam/http
@@ -330,15 +334,15 @@ fn headers_without_json_content_type(curl: Curl) {
 /// Example:
 ///
 /// ```
-/// to_args(curlify)  →  ["-X", "POST", "--json", "{\"name\": \"test\"}", ...]
-/// to_string(curlify) → "curl -X POST --json '{\"name\": \"test\"}' ..."
+/// to_args(curl)  →  ["-X", "POST", "--json", "{\"name\": \"test\"}", ...]
+/// to_string(curl) → "curl -X POST --json '{\"name\": \"test\"}' ..."
 /// ```
 pub fn to_args(curl: Curl) -> List(String) {
   to_arguments(curl, function.identity)
   |> list.flatten
 }
 
-/// Convert a gleam_http Request directly into a curl command string.
+/// Convert a `gleam_http` request directly into a curl command string.
 ///
 /// Equivalent to `from_request(req) |> to_string`.
 pub fn request_to_curl(req: request.Request(String)) -> String {

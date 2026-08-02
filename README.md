@@ -1,15 +1,34 @@
 # curlify
 
 [![Package Version](https://img.shields.io/hexpm/v/curlify)](https://hex.pm/packages/curlify)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/curlify/)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/curlify`/)`
 
-Convert `gleam_http` requests to curl commands and back. Useful for debugging, logging, sharing with that one colleague, or recreating requests from captured curl commands.
+Utilitys for generating `curl` commands. Use the builder api, convert a `gleam_http` request or
+parse a curl command line string.
+
+Checkout the companion lib called `curlify_wisp` if you are a wisp user.
 
 ```sh
 gleam add curlify@1
 ```
 
 ## Usage
+
+### URL → curl string
+
+```gleam
+import curlify
+import gleam/http
+
+pub fn main() {
+  curlify.from_url("https://api.example.com/users")
+  |> curlify.set_method(http.Post)
+  |> curlify.set_body(curlify.Json("{\"name\": \"test\"}"))
+  |> curlify.to_string()
+
+  // → curl -X POST --json '{"name": "test"}' 'https://api.example.com/users'
+}
+```
 
 ### Request → curl string
 
@@ -79,6 +98,7 @@ curlify.curl_to_request(str)  // parse |> to_request
 Unsupported flags are silently dropped.
 
 **Notes on behavior:**
+
 - Multiple `-d`/`--data` flags use **last-wins** (real curl concatenates with `&`).
 - `--max-time` with a non-integer value returns `Error(BadTimeoutValue)`.
 - `from_request` automatically detects `Content-Type: application/json` and stores the body as the `Json(...)` variant, so it renders as `--json`.
