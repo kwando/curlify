@@ -525,6 +525,9 @@ fn tokenize_chars(
           }
         DoubleQuote, _ ->
           tokenize_chars(rest, tokens, [char, ..current], DoubleQuote)
+        Escape, "\n" -> tokenize_chars(rest, tokens, current, Normal)
+        Escape, "\r" -> tokenize_chars(rest, tokens, current, Normal)
+        Escape, "\r\n" -> tokenize_chars(rest, tokens, current, Normal)
         Escape, _ -> tokenize_chars(rest, tokens, [char, ..current], Normal)
       }
     }

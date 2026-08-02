@@ -535,6 +535,55 @@ pub fn parse_curl_tokenizer_embedded_quote_test() {
   assert result.body == curlify.Text("it's")
 }
 
+pub fn parse_multi_line_curl_backslash_test() {
+  let assert Ok(result) =
+    curlify.parse("curl \\\n-X POST \\\n-d 'hello' \\\n'https://example.com'")
+
+  assert result.method == http.Post
+  assert result.body == curlify.Text("hello")
+  assert result.url == "https://example.com"
+}
+
+pub fn parse_multi_line_curl_backslash_windows_test() {
+  let assert Ok(result) =
+    curlify.parse(
+      "curl \\\r\n-X POST \\\r\n-d 'hello' \\\r\n'https://example.com'",
+    )
+
+  assert result.method == http.Post
+  assert result.body == curlify.Text("hello")
+  assert result.url == "https://example.com"
+}
+
+pub fn parse_multi_line_curl_flags_across_lines_test() {
+  let assert Ok(result) =
+    curlify.parse(
+      "curl -X POST \\\n  -H 'Content-Type: application/json' \\\n  --json '{\"a\": 1}' \\\n  'https://api.example.com'",
+    )
+
+  assert result.method == http.Post
+  assert result.body == curlify.Json("{\"a\": 1}")
+  assert result.headers == [#("content-type", "application/json")]
+  assert result.url == "https://api.example.com"
+}
+
+pub fn parse_multi_line_curl_round_trip_test() {
+  let assert Ok(result) =
+    curlify.parse(
+      "curl -X POST \\\n-H 'accept: application/json' \\\n-d 'body text' \\\n'https://example.com'",
+    )
+
+  assert curlify.to_string(result)
+    == "curl -X POST -H 'accept: application/json' --data 'body text' 'https://example.com'"
+}
+
+pub fn parse_multi_line_curl_missing_url_test() {
+  let result =
+    curlify.parse("curl -X GET \\\n-H 'Accept: text/plain' \\\n-d 'body'")
+
+  assert result == Error(curlify.MissingUrl)
+}
+
 pub fn request_to_curl_get_test() {
   let assert Ok(req) = request.to("https://api.example.com/users")
 
