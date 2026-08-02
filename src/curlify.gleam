@@ -450,6 +450,17 @@ pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
 
   let req = case curl.body {
     Json(_) -> request.set_header(req, "content-type", "application/json")
+    Text(_) -> {
+      case request.get_header(req, "content-type") {
+        Ok(_) -> req
+        Error(_) ->
+          request.set_header(
+            req,
+            "content-type",
+            "application/x-www-form-urlencoded",
+          )
+      }
+    }
     _ -> req
   }
 
@@ -562,7 +573,12 @@ fn parse_args(tokens: List(String)) -> Result(Curl, CurlParseError) {
       basic_auth: None,
     )
 
-  use #(curl, positional) <- result.try(parse_args_loop(tokens, initial, []))
+  use #(curl, positional) <- result.try(parse_args_loop(
+    tokens,
+    initial,
+    [],
+    False,
+  ))
 
   let url = case positional {
     [u, ..] -> Ok(u)
@@ -573,14 +589,13 @@ fn parse_args(tokens: List(String)) -> Result(Curl, CurlParseError) {
   Ok(Curl(..curl, url: url, headers: list.reverse(curl.headers)))
 }
 
-/// Recursive token walker. Each known flag pattern matches and updates the
-/// Curl struct via record update. Combined short flags like `-XPOST` have
-/// explicit patterns. Unknown tokens starting with `-` are silently dropped.
-/// All other tokens are collected as positional (the first becomes the URL).
+/// Recursive token walker. `method_explicit` tracks whether `-X`/`--request`
+/// was explicitly set, so body flags like `-d` can default to POST.
 fn parse_args_loop(
   tokens: List(String),
   curl: Curl,
   positional: List(String),
+  method_explicit: Bool,
 ) -> Result(#(Curl, List(String)), CurlParseError) {
   case tokens {
     [] -> Ok(#(curl, positional))
@@ -588,7 +603,8 @@ fn parse_args_loop(
     | ["--request", method, ..rest]
     | ["-X" <> method, ..rest] ->
       case http.parse_method(method) {
-        Ok(method) -> parse_args_loop(rest, Curl(..curl, method:), positional)
+        Ok(method) ->
+          parse_args_loop(rest, Curl(..curl, method:), positional, True)
         Error(_) -> Error(UnknownHttpMethod(method))
       }
 
@@ -601,6 +617,7 @@ fn parse_args_loop(
         rest,
         Curl(..curl, headers: [header, ..curl.headers]),
         positional,
+        method_explicit,
       )
     }
 
@@ -608,10 +625,28 @@ fn parse_args_loop(
     | ["--data", value, ..rest]
     | ["--data-raw", value, ..rest]
     | ["--data-binary", value, ..rest] ->
-      parse_args_loop(rest, Curl(..curl, body: Text(value)), positional)
+      parse_args_loop(
+        rest,
+        Curl(
+          ..curl,
+          body: Text(value),
+          method: infer_method(method_explicit, curl.method),
+        ),
+        positional,
+        method_explicit,
+      )
 
     ["--json", value, ..rest] ->
-      parse_args_loop(rest, Curl(..curl, body: Json(value)), positional)
+      parse_args_loop(
+        rest,
+        Curl(
+          ..curl,
+          body: Json(value),
+          method: infer_method(method_explicit, curl.method),
+        ),
+        positional,
+        method_explicit,
+      )
 
     ["--data-urlencode", value, ..rest] -> {
       let pair = parse_form_pair(value)
@@ -619,24 +654,59 @@ fn parse_args_loop(
         Form(fields) -> Form(list.append(fields, [pair]))
         _ -> Form([pair])
       }
-      parse_args_loop(rest, Curl(..curl, body: body), positional)
+      parse_args_loop(
+        rest,
+        Curl(
+          ..curl,
+          body: body,
+          method: infer_method(method_explicit, curl.method),
+        ),
+        positional,
+        method_explicit,
+      )
     }
 
     ["-L", ..rest] | ["--location", ..rest] ->
-      parse_args_loop(rest, Curl(..curl, follow_redirects: True), positional)
+      parse_args_loop(
+        rest,
+        Curl(..curl, follow_redirects: True),
+        positional,
+        method_explicit,
+      )
 
     ["-v", ..rest] | ["--verbose", ..rest] ->
-      parse_args_loop(rest, Curl(..curl, verbose: True), positional)
+      parse_args_loop(
+        rest,
+        Curl(..curl, verbose: True),
+        positional,
+        method_explicit,
+      )
 
     ["-k", ..rest] | ["--insecure", ..rest] ->
-      parse_args_loop(rest, Curl(..curl, insecure: True), positional)
+      parse_args_loop(
+        rest,
+        Curl(..curl, insecure: True),
+        positional,
+        method_explicit,
+      )
 
     ["--compressed", ..rest] ->
-      parse_args_loop(rest, Curl(..curl, compressed: True), positional)
+      parse_args_loop(
+        rest,
+        Curl(..curl, compressed: True),
+        positional,
+        method_explicit,
+      )
 
     ["--max-time", value, ..rest] -> {
       case int.parse(value) {
-        Ok(timeout) -> parse_args_loop(rest, Curl(..curl, timeout:), positional)
+        Ok(timeout) ->
+          parse_args_loop(
+            rest,
+            Curl(..curl, timeout:),
+            positional,
+            method_explicit,
+          )
         Error(_) -> Error(BadTimeoutValue)
       }
     }
@@ -646,15 +716,28 @@ fn parse_args_loop(
         Ok(#(u, p)) -> Some(#(u, p))
         Error(_) -> Some(#(value, ""))
       }
-      parse_args_loop(rest, Curl(..curl, basic_auth: basic_auth), positional)
+      parse_args_loop(
+        rest,
+        Curl(..curl, basic_auth: basic_auth),
+        positional,
+        method_explicit,
+      )
     }
 
     [token, ..rest] -> {
       case string.starts_with(token, "-") {
-        True -> parse_args_loop(rest, curl, positional)
-        False -> parse_args_loop(rest, curl, [token, ..positional])
+        True -> parse_args_loop(rest, curl, positional, method_explicit)
+        False ->
+          parse_args_loop(rest, curl, [token, ..positional], method_explicit)
       }
     }
+  }
+}
+
+fn infer_method(method_explicit: Bool, current: http.Method) -> http.Method {
+  case method_explicit {
+    True -> current
+    False -> http.Post
   }
 }
 

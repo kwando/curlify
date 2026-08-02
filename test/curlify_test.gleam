@@ -353,6 +353,37 @@ pub fn to_request_json_sets_content_type_header_test() {
   assert request.body == "{}"
 }
 
+pub fn to_request_text_body_default_content_type_test() {
+  let assert Ok(request) =
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_body(curlify.Text("hello"))
+    |> curlify.to_request()
+
+  let assert ["application/x-www-form-urlencoded"] =
+    list.key_filter(request.headers, "content-type")
+  assert request.body == "hello"
+}
+
+pub fn to_request_text_body_explicit_content_type_preserved_test() {
+  let assert Ok(request) =
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_body(curlify.Text("hello"))
+    |> curlify.set_header("content-type", "text/plain")
+    |> curlify.to_request()
+
+  let assert ["text/plain"] = list.key_filter(request.headers, "content-type")
+  assert request.body == "hello"
+}
+
+pub fn parse_curl_data_sets_default_content_type_test() {
+  let assert Ok(curl) = curlify.parse("curl -d 'hello' 'https://example.com'")
+  let assert Ok(request) = curlify.to_request(curl)
+
+  let assert ["application/x-www-form-urlencoded"] =
+    list.key_filter(request.headers, "content-type")
+  assert request.body == "hello"
+}
+
 pub fn header_order_preserved_in_to_string_test() {
   let assert Ok(req) = request.to("https://api.example.com/data")
   let req =
@@ -423,6 +454,37 @@ pub fn parse_curl_simple_get_test() {
   assert result.method == http.Get
   assert result.url == "https://example.org"
   assert result.body == curlify.Empty
+}
+
+pub fn parse_curl_data_implies_post_test() {
+  let assert Ok(result) = curlify.parse("curl -d 'hello' 'https://example.com'")
+
+  assert result.method == http.Post
+  assert result.body == curlify.Text("hello")
+}
+
+pub fn parse_curl_json_implies_post_test() {
+  let assert Ok(result) =
+    curlify.parse("curl --json '{}' 'https://example.com'")
+
+  assert result.method == http.Post
+  assert result.body == curlify.Json("{}")
+}
+
+pub fn parse_curl_data_urlencode_implies_post_test() {
+  let assert Ok(result) =
+    curlify.parse("curl --data-urlencode 'name=John' 'https://example.com'")
+
+  assert result.method == http.Post
+  assert result.body == curlify.Form([#("name", "John")])
+}
+
+pub fn parse_curl_explicit_get_overrides_data_test() {
+  let assert Ok(result) =
+    curlify.parse("curl -X GET -d 'hello' 'https://example.com'")
+
+  assert result.method == http.Get
+  assert result.body == curlify.Text("hello")
 }
 
 pub fn parse_curl_without_leading_curl_test() {

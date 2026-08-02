@@ -96,13 +96,7 @@ curlify.from_request(req)
 //      |> request.set_body("{\"name\": \"test\"}")
 ```
 
-### Direct convenience
-
-```gleam
-curlify.request_to_curl(req)  // from_request |> to_string
-curlify.curl_to_request(str)  // parse |> to_request
-curlify.to_gleam(curl)        // Curl → Gleam source code
-```
+(yes, I'm just gluing strings together and hoping for the bests.)
 
 ## Supported curl flags for parsing
 
