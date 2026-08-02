@@ -80,6 +80,28 @@ pub fn from_request(req: request.Request(String)) -> Curl {
   )
 }
 
+/// Create a Curl from a URL string. The URL is stored as-is and
+/// validated later if `to_request` is called.
+pub fn from_url(url: String) -> Curl {
+  Curl(
+    method: http.Get,
+    url: url,
+    headers: [],
+    body: Empty,
+    follow_redirects: False,
+    verbose: False,
+    insecure: False,
+    compressed: False,
+    timeout: 0,
+    basic_auth: None,
+  )
+}
+
+/// Create a Curl from a `gleam/uri` Uri.
+pub fn from_uri(u: uri.Uri) -> Curl {
+  from_url(uri.to_string(u))
+}
+
 /// If the headers contain an `authorization: Basic <base64>` entry,
 /// decode it into a `(user, password)` pair and remove the header.
 fn extract_basic_auth(

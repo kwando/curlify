@@ -4,6 +4,7 @@ import gleam/http
 import gleam/http/request
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/uri
 import gleeunit
 
 pub fn main() {
@@ -53,6 +54,26 @@ pub fn from_request_with_basic_auth_test() {
   assert curlify.basic_auth == Some(#("admin", "secret"))
   // The Authorization header should be removed from headers
   assert curlify.headers == []
+}
+
+pub fn from_url_test() {
+  let c = curlify.from_url("https://api.example.com/users")
+
+  assert c.method == http.Get
+  assert c.url == "https://api.example.com/users"
+  assert c.body == curlify.Empty
+  assert c.basic_auth == None
+}
+
+pub fn from_uri_test() {
+  let assert Ok(parsed) = uri.parse("https://api.example.com/users")
+
+  let c = curlify.from_uri(parsed)
+
+  assert c.method == http.Get
+  assert c.url == "https://api.example.com/users"
+  assert c.body == curlify.Empty
+  assert c.basic_auth == None
 }
 
 pub fn body_setter_test() {
