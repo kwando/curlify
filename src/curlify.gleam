@@ -36,6 +36,9 @@ pub type CurlParseError {
   /// The curl command used an HTTP method that is not recognized
   /// by `gleam/http` (e.g. `-XWHATEVER`).
   UnknownHttpMethod(method: String)
+
+  /// The curl command used an invalid timeout value (not an integer).
+  BadTimeoutValue
 }
 
 /// Accumulated state for rendering a curl command.
@@ -533,11 +536,10 @@ fn parse_args_loop(
       parse_args_loop(rest, Curl(..curl, compressed: True), positional)
 
     ["--max-time", value, ..rest] -> {
-      let timeout = case int.parse(value) {
-        Ok(n) -> n
-        Error(_) -> curl.timeout
+      case int.parse(value) {
+        Ok(timeout) -> parse_args_loop(rest, Curl(..curl, timeout:), positional)
+        Error(_) -> Error(BadTimeoutValue)
       }
-      parse_args_loop(rest, Curl(..curl, timeout: timeout), positional)
     }
 
     ["-u", value, ..rest] | ["--user", value, ..rest] -> {
