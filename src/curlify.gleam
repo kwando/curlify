@@ -17,8 +17,8 @@ pub fn shell_escape(input: String) -> String {
   "'" <> string.replace(input, "'", "'\\''") <> "'"
 }
 
-/// Request body variants. Text and Json both render as `--data`
-/// in the curl command; Form renders as one or more `--data-urlencode`.
+/// Request body variants. Text renders as `--data`, Json renders as
+/// `--json`, and Form renders as one or more `--data-urlencode`.
 pub type Body {
   Empty
   Text(String)
@@ -62,6 +62,8 @@ pub type Curl {
 /// If the request has an `Authorization: Basic` header, it is decoded
 /// and stored in `basic_auth`, and the header is removed from the list
 /// to avoid redundancy when rendering the curl command.
+/// If the request has a `Content-Type: application/json` header, the body
+/// is stored as `Json(...)` so it renders as `--json`.
 pub fn from_request(req: request.Request(String)) -> Curl {
   let body = case req.body {
     "" -> Empty
@@ -198,7 +200,7 @@ pub fn set_method(curl: Curl, method: http.Method) -> Curl {
 ///
 /// Example output:
 ///
-/// ```curl -X POST -H 'content-type: application/json' --data '{...}' 'https://example.com'```
+/// ```curl -X POST -H 'authorization: Bearer tok' --json '{"key": "val"}' 'https://example.com'```
 pub fn to_string(curl: Curl) -> String {
   [
     "curl",
@@ -218,8 +220,8 @@ const pretty_indent: String = "  "
 /// Example:
 /// ```text
 ///   curl -X POST \
-///     -H 'content-type: application/json' \
-///     --data '{...}' \
+///     -H 'authorization: Bearer tok' \
+///     --json '{"key": "val"}' \
 ///     'https://example.com'
 /// ```
 pub fn to_pretty_string(curl: Curl) -> String {
@@ -328,8 +330,8 @@ fn headers_without_json_content_type(curl: Curl) {
 /// Example:
 ///
 /// ```
-/// to_args(curlify)  →  ["-X", "POST", "-H", "content-type: application/json", ...]
-/// to_string(curlify) → "curl -XPOST -H 'content-type: application/json' ..."
+/// to_args(curlify)  →  ["-X", "POST", "--json", "{\"name\": \"test\"}", ...]
+/// to_string(curlify) → "curl -X POST --json '{\"name\": \"test\"}' ..."
 /// ```
 pub fn to_args(curl: Curl) -> List(String) {
   to_arguments(curl, function.identity)
@@ -357,7 +359,8 @@ fn body_to_request_string(body: Body) -> String {
 
 /// The inverse of `from_request`. Reconstructs a `gleam/http/request.Request`
 /// from the HTTP-relevant fields of a Curl. If the Curl has `basic_auth`
-/// set, an `Authorization: Basic` header is added.
+/// set, an `Authorization: Basic` header is added. If the body is
+/// `Json(...)`, a `Content-Type: application/json` header is set.
 pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
   use req <- result.try(request.to(curl.url))
 
@@ -595,15 +598,16 @@ fn parse_args_loop(
 /// - --data-raw
 /// - --data-binary
 /// - --json
-/// - --data-urlencode,
+/// - --data-urlencode
 /// - -L/--location
 /// - -v/--verbose
 /// - -k/--insecure
-/// - --compressed,
+/// - --compressed
 /// - --max-time
 /// - -u/--user.
 ///
 /// Unsupported flags are silently dropped.
+/// Returns `Error(BadTimeoutValue)` if `--max-time` is not a valid integer.
 ///
 /// The input string is first tokenized using POSIX shell quoting
 /// rules (single quotes, double quotes, backslash), then parsed

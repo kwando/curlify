@@ -29,7 +29,7 @@ pub fn main() {
   |> curlify.set_timeout(30)
   |> curlify.to_string()
 
-  // → curl -X POST -H 'content-type: application/json' --data '{"name": "test"}' --max-time 30 -L 'https://api.example.com/users'
+  // → curl -X POST --json '{"name": "test"}' --max-time 30 -L 'https://api.example.com/users'
 }
 ```
 
@@ -39,18 +39,19 @@ pub fn main() {
 curlify.from_request(req)
 |> curlify.to_pretty_string()
 // → curl -X POST \
-//     -H 'content-type: application/json' \
-//     --data '{"name": "test"}' \
+//     --json '{"name": "test"}' \
 //     'https://api.example.com/users'
 ```
 
 ### Curl string → Request
 
 ```gleam
-let assert Ok(req) = curlify.parse(
-  "curl -X POST -H 'content-type: application/json' --data '{\"name\": \"test\"}' 'https://api.example.com/data'",
+// Parse a curl command
+let assert Ok(curl) = curlify.parse(
+  "curl -X POST --json '{\"name\": \"test\"}' 'https://api.example.com/data'",
 )
 
+// Parse and convert directly to a request
 let assert Ok(req) = curlify.curl_to_request(
   "curl -X POST -H 'content-type: application/json' --data '{\"name\": \"test\"}' 'https://api.example.com/data'",
 )
@@ -61,7 +62,7 @@ let assert Ok(req) = curlify.curl_to_request(
 ```gleam
 curlify.from_request(req)
 |> curlify.to_args()
-// → ["-X", "POST", "-H", "content-type: application/json", "--data", "{\"name\": \"test\"}", "https://api.example.com/users"]
+// → ["-X", "POST", "--json", "{\"name\": \"test\"}", "https://api.example.com/users"]
 ```
 
 ### Direct convenience
@@ -76,6 +77,11 @@ curlify.curl_to_request(str)  // parse |> to_request
 `-X`/`--request`, `-H`/`--header`, `-d`/`--data`, `--data-raw`, `--data-binary`, `--json`, `--data-urlencode`, `-L`/`--location`, `-v`/`--verbose`, `-k`/`--insecure`, `--compressed`, `--max-time`, `-u`/`--user`.
 
 Unsupported flags are silently dropped.
+
+**Notes on behavior:**
+- Multiple `-d`/`--data` flags use **last-wins** (real curl concatenates with `&`).
+- `--max-time` with a non-integer value returns `Error(BadTimeoutValue)`.
+- `from_request` automatically detects `Content-Type: application/json` and stores the body as the `Json(...)` variant, so it renders as `--json`.
 
 ## Development
 
