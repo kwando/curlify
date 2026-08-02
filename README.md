@@ -84,11 +84,24 @@ curlify.from_request(req)
 // → ["-X", "POST", "--json", "{\"name\": \"test\"}", "https://api.example.com/users"]
 ```
 
+### Gleam source code
+
+```gleam
+curlify.from_request(req)
+|> curlify.to_gleam()
+// → let assert Ok(req) = request.to("https://api.example.com/data")
+//    let req = req
+//      |> request.set_method(http.Post)
+//      |> request.set_header("accept", "application/json")
+//      |> request.set_body("{\"name\": \"test\"}")
+```
+
 ### Direct convenience
 
 ```gleam
 curlify.request_to_curl(req)  // from_request |> to_string
 curlify.curl_to_request(str)  // parse |> to_request
+curlify.to_gleam(curl)        // Curl → Gleam source code
 ```
 
 ## Supported curl flags for parsing

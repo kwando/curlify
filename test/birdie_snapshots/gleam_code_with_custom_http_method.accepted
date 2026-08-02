@@ -1,0 +1,9 @@
+---
+version: 2.0.2
+title: gleam code with custom http method
+file: ./test/to_gleam_test.gleam
+test_name: to_gleam_with_custom_http_method_test
+---
+let assert Ok(req) = request.to("https://api.example.com/data")
+req
+|> request.set_method(http.Other("WIBBLE"))

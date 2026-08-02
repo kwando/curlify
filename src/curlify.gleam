@@ -349,6 +349,68 @@ pub fn request_to_curl(req: request.Request(String)) -> String {
   req |> from_request |> to_string
 }
 
+/// Generate Gleam source code that reconstructs this Curl as a
+/// `gleam_http` request. The output can be pasted into the body of a
+/// Gleam function.
+///
+/// No import are generated.
+///
+/// The usefulness of this function is debatable.. but here it is anyways.
+pub fn to_gleam(curl: Curl) -> Result(String, Nil) {
+  use req <- result.try(to_request(curl))
+  let url = gleam_escape(curl.url)
+
+  "let assert Ok(req) = request.to($url)
+req$set_method$set_headers$set_body"
+  |> string.replace("$url", url)
+  |> string.replace("$set_method", case req.method {
+    http.Get -> ""
+    http.Post -> "\n|> request.set_method(http.Post)"
+    http.Head -> "\n|> request.set_method(http.Head)"
+    http.Put -> "\n|> request.set_method(http.Put)"
+    http.Delete -> "\n|> request.set_method(http.Delete)"
+    http.Trace -> "\n|> request.set_method(http.Trace)"
+    http.Connect -> "\n|> request.set_method(http.Connect)"
+    http.Options -> "\n|> request.set_method(http.Options)"
+    http.Patch -> "\n|> request.set_method(http.Patch)"
+    http.Other(other) ->
+      "\n|> request.set_method(http.Other(" <> gleam_escape(other) <> "))"
+  })
+  |> string.replace("$headers", case req.headers {
+    [] -> "[]"
+    _ -> string.inspect(req.headers)
+  })
+  |> string.replace("$set_body", case req.body {
+    "" -> ""
+    _ -> "\n|> request.set_body(" <> gleam_escape(req.body) <> ")"
+  })
+  |> string.replace(
+    "$set_headers",
+    req.headers
+      |> list.map(fn(header) {
+        "\n|> request.set_header("
+        <> gleam_escape(header.0)
+        <> ", "
+        <> gleam_escape(header.1)
+        <> ")"
+      })
+      |> string.concat,
+  )
+  |> string.remove_suffix("\nreq")
+  |> Ok
+}
+
+fn gleam_escape(input: String) -> String {
+  "\""
+  <> input
+  |> string.replace("\\", "\\\\")
+  |> string.replace("\"", "\\\"")
+  |> string.replace("\n", "\\n")
+  |> string.replace("\r", "\\r")
+  |> string.replace("\t", "\\t")
+  <> "\""
+}
+
 // ── Convert a Curl back to a gleam_http Request ──────────
 
 /// Convert a Body value back into a raw request body string.

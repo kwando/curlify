@@ -1,0 +1,10 @@
+---
+version: 2.0.2
+title: gleam code post with form
+file: ./test/to_gleam_test.gleam
+test_name: to_gleam_form_test
+---
+let assert Ok(req) = request.to("https://api.example.com/data")
+req
+|> request.set_method(http.Post)
+|> request.set_body("name=John%20Doe&age=30")

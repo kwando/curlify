@@ -1,0 +1,7 @@
+---
+version: 2.0.2
+title: gleam code with url params
+file: ./test/to_gleam_test.gleam
+test_name: to_gleam_with_url_params_test
+---
+let assert Ok(req) = request.to("https://api.example.com/data?foo=bar")
