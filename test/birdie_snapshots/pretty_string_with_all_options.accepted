@@ -1,0 +1,15 @@
+---
+version: 2.0.2
+title: pretty string with all options
+file: ./test/curlify_test.gleam
+test_name: to_pretty_string_with_options_snapshot_test
+---
+curl -X POST \
+  -H 'content-type: application/json' \
+  --verbose \
+  --user 'admin:secret' \
+  --insecure \
+  --compressed \
+  --max-time 30 \
+  --location \
+  'https://api.example.com/data'
