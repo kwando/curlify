@@ -2,7 +2,7 @@ import curlify.{type Curl}
 import gleam/http/request
 import gleam/int
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import gleam/uri
@@ -28,11 +28,11 @@ pub fn from_request(req: wisp.Request, body: String) -> Result(Curl, Nil) {
     |> request.set_body(body)
 
   let http_req =
-    list.fold(req.headers, http_req, fn(acc, header) {
+    list.fold(req.headers, http_req, fn(http_req, header) {
       let #(key, value) = header
       case should_drop_header(key) {
-        True -> acc
-        False -> request.set_header(acc, key, value)
+        True -> http_req
+        False -> request.set_header(http_req, key, value)
       }
     })
 
@@ -62,32 +62,14 @@ fn build_external_url(req: wisp.Request) -> uri.Uri {
   let forwarded_host = list.key_find(req.headers, "x-forwarded-host")
   let forwarded_port = list.key_find(req.headers, "x-forwarded-port")
 
-  let host = case forwarded_host {
-    Ok(h) -> h
-    Error(_) ->
-      case base.host {
-        Some(h) -> h
-        None -> "localhost"
-      }
-  }
+  let host =
+    forwarded_host
+    |> result.unwrap(option.unwrap(base.host, "localhost"))
 
-  let port = case forwarded_port {
-    Ok(p) -> int.parse(p)
-    Error(_) -> Error(Nil)
-  }
+  let port: Option(Int) =
+    forwarded_port
+    |> result.try(int.parse)
+    |> option.from_result
 
-  let port = case port {
-    Ok(p) -> Some(p)
-    Error(_) -> base.port
-  }
-
-  uri.Uri(
-    scheme: Some(scheme),
-    userinfo: base.userinfo,
-    host: Some(host),
-    port: port,
-    path: base.path,
-    query: base.query,
-    fragment: base.fragment,
-  )
+  uri.Uri(..base, scheme: Some(scheme), host: Some(host), port:)
 }
