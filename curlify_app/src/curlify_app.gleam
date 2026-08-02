@@ -4,7 +4,7 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
-import lustre.{type App}
+import lustre
 import lustre/attribute.{class}
 import lustre/element
 import lustre/element/html
