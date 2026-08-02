@@ -65,7 +65,12 @@ pub type Curl {
 pub fn from_request(req: request.Request(String)) -> Curl {
   let body = case req.body {
     "" -> Empty
-    body_content -> Text(body_content)
+    body_content -> {
+      case request.get_header(req, "content-type") {
+        Ok("application/json" <> _) -> Json(body_content)
+        Ok(_) | Error(_) -> Text(body_content)
+      }
+    }
   }
 
   let #(basic_auth, headers) = extract_basic_auth(req.headers)
@@ -267,21 +272,23 @@ fn to_arguments(
         }),
       ),
     ],
-    list.map(curl.headers, fn(header) {
-      let #(key, value) = header
-      string_flag("-H", shell_escape(key <> ": " <> value))
-    }),
+
+    {
+      use header <- list.map(headers_without_json_content_type(curl))
+      string_flag("-H", shell_escape(header.0 <> ": " <> header.1))
+    },
 
     case curl.body {
       Empty -> []
-      Text(content) | Json(content) -> [
+      Text(content) -> [
         string_flag("--data", shell_escape(content)),
       ]
+      Json(content) -> [
+        string_flag("--json", shell_escape(content)),
+      ]
       Form(fields) -> {
-        list.map(fields, fn(field) {
-          let #(key, value) = field
-          string_flag("--data-urlencode", shell_escape(key <> "=" <> value))
-        })
+        use field <- list.map(fields)
+        string_flag("--data-urlencode", shell_escape(field.0 <> "=" <> field.1))
       }
     },
     [bool_flag("--verbose", curl.verbose)],
@@ -297,6 +304,21 @@ fn to_arguments(
   ]
   |> list.flatten
   |> list.filter(fn(x) { x != [] })
+}
+
+// removes content-type=application headers if the body is JSON
+fn headers_without_json_content_type(curl: Curl) {
+  case curl.body {
+    Json(_) ->
+      list.filter(curl.headers, fn(h) {
+        let #(k, v) = h
+        let is_content_type = k == "content-type"
+        let is_json_value =
+          string.trim(string.lowercase(v)) == "application/json"
+        !is_content_type || !is_json_value
+      })
+    _ -> curl.headers
+  }
 }
 
 /// Return the curl arguments as a raw list of strings, without
@@ -356,6 +378,11 @@ pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
       let #(key, value) = header
       request.set_header(req, key, value)
     })
+
+  let req = case curl.body {
+    Json(_) -> request.set_header(req, "content-type", "application/json")
+    _ -> req
+  }
 
   Ok(request.set_body(req, body_to_request_string(curl.body)))
 }

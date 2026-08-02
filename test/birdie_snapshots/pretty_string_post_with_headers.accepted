@@ -5,6 +5,5 @@ file: ./test/curlify_test.gleam
 test_name: to_pretty_string_post_with_headers_snapshot_test
 ---
 curl -X POST \
-  -H 'content-type: application/json' \
-  --data '{"name": "test"}' \
+  --json '{"name": "test"}' \
   'https://api.example.com/data'

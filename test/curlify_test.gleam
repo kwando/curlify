@@ -40,6 +40,19 @@ pub fn from_request_with_body_test() {
   let curlify = curlify.from_request(req)
 
   assert curlify.method == http.Post
+  assert curlify.body == curlify.Json("{\"name\": \"test\"}")
+}
+
+pub fn from_request_with_no_content_type_header_test() {
+  let assert Ok(req) = request.to("https://api.example.com/data")
+  let req =
+    req
+    |> request.set_method(http.Post)
+    |> request.set_body("{\"name\": \"test\"}")
+
+  let curlify = curlify.from_request(req)
+
+  assert curlify.method == http.Post
   assert curlify.body == curlify.Text("{\"name\": \"test\"}")
 }
 
@@ -157,16 +170,14 @@ pub fn to_string_post_with_body_test() {
 }
 
 pub fn to_string_with_json_body_test() {
-  let assert Ok(req) = request.to("https://api.example.com/data")
-  let req = req |> request.set_method(http.Post)
-
   let result =
-    curlify.from_request(req)
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_method(http.Post)
     |> curlify.set_body(curlify.Json("{\"key\": \"value\"}"))
     |> curlify.to_string()
 
   assert result
-    == "curl -X POST --data '{\"key\": \"value\"}' 'https://api.example.com/data'"
+    == "curl -X POST --json '{\"key\": \"value\"}' 'https://api.example.com/data'"
 }
 
 pub fn to_string_with_form_body_test() {
@@ -196,7 +207,7 @@ pub fn to_string_complex_request_test() {
     |> curlify.to_string()
 
   assert result
-    == "curl -X POST -H 'authorization: Bearer token123' -H 'content-type: application/json' --data '{\"name\": \"test\"}' 'https://api.example.com/users?page=1'"
+    == "curl -X POST -H 'authorization: Bearer token123' --json '{\"name\": \"test\"}' 'https://api.example.com/users?page=1'"
 }
 
 pub fn to_string_with_options_test() {
@@ -316,6 +327,8 @@ pub fn to_request_with_post_body_test() {
 
   assert result.method == http.Post
   assert result.body == "{\"name\": \"test\"}"
+  assert result.headers |> list.key_filter("content-type")
+    == ["application/json"]
 }
 
 pub fn to_request_form_body_test() {
@@ -327,6 +340,17 @@ pub fn to_request_form_body_test() {
     |> curlify.to_request()
 
   assert result.body == "name=John%20Doe&age=30"
+}
+
+pub fn to_request_json_sets_content_type_header_test() {
+  let assert Ok(request) =
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_body(curlify.Json("{}"))
+    |> curlify.to_request()
+
+  let assert ["application/json"] =
+    list.key_filter(request.headers, "content-type")
+  assert request.body == "{}"
 }
 
 pub fn header_order_preserved_in_to_string_test() {
@@ -530,7 +554,7 @@ pub fn request_to_curl_post_test() {
   let result = curlify.request_to_curl(req)
 
   assert result
-    == "curl -X POST -H 'content-type: application/json' --data '{\"name\": \"test\"}' 'https://api.example.com/data'"
+    == "curl -X POST --json '{\"name\": \"test\"}' 'https://api.example.com/data'"
 }
 
 pub fn curl_to_request_get_test() {
