@@ -128,24 +128,24 @@ fn update_code_gen_options(
 }
 
 fn init(_flags: a) -> Model {
-  let example =
-    list.sample(examples, 1)
-    |> list.first
-    |> option.from_result
-
   Model(
     input: "",
     curl: curlify.from_url(""),
     error: "",
     gleam_tokens: [],
-    example: None,
+    example: option.None,
     code_gen_options: gleam_code_gen.Options(
       inline_body: False,
       parse_json: True,
       imports: True,
     ),
   )
-  |> load_example(example)
+  |> load_example(
+    Some(Example(
+      title: "Post JSON",
+      curl: "curl -X POST \\\n  -H 'authorization: Bearer CAFEBABE' \\\n  --json '{\"username\": \"lucy\"}' \\\n  'https://api.example.com/data'",
+    )),
+  )
 }
 
 fn load_example(model, example: Option(Example)) {
