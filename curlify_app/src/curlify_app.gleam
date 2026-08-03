@@ -200,7 +200,7 @@ fn prepend_imports(code: String) {
 fn view(model: Model) {
   html.div([class("p-4 flex flex-col gap-8")], [
     html.div([class("flex justify-between items-center")], [
-      html.div([], [
+      html.div([class("whitespace-nowrap")], [
         html.h1([class("font-mono text-xl text-center font-bold")], [
           prompt_element(),
           html.text("Curlify"),
