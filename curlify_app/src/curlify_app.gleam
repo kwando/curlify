@@ -1,5 +1,6 @@
 import contour
 import curlify
+import curlify_app/gleam_code_gen
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -83,6 +84,7 @@ pub opaque type Model {
     error: String,
     gleam_tokens: List(contour.Token),
     example: Option(Example),
+    code_gen_options: gleam_code_gen.Options,
   )
 }
 
@@ -90,6 +92,8 @@ pub opaque type Msg {
   InputUpdated(text: String)
   UserClickedClearInput
   UserClickerShowExampleButton
+  UserToggledParseJson(Bool)
+  UserToggledInlineBody(Bool)
 }
 
 fn update(model: Model, value: Msg) -> Model {
@@ -104,7 +108,23 @@ fn update(model: Model, value: Msg) -> Model {
 
       load_example(model, example)
     }
+    UserToggledParseJson(parse_json) ->
+      update_code_gen_options(model, fn(opts) {
+        gleam_code_gen.Options(..opts, parse_json:)
+      })
+    UserToggledInlineBody(inline_body) ->
+      update_code_gen_options(model, fn(opts) {
+        gleam_code_gen.Options(..opts, inline_body:)
+      })
   }
+}
+
+fn update_code_gen_options(
+  model,
+  update: fn(gleam_code_gen.Options) -> gleam_code_gen.Options,
+) {
+  Model(..model, code_gen_options: update(model.code_gen_options))
+  |> update_curl_from_input
 }
 
 fn init(_flags: a) -> Model {
@@ -119,6 +139,11 @@ fn init(_flags: a) -> Model {
     error: "",
     gleam_tokens: [],
     example: None,
+    code_gen_options: gleam_code_gen.Options(
+      inline_body: False,
+      parse_json: True,
+      imports: True,
+    ),
   )
   |> load_example(example)
 }
@@ -159,7 +184,7 @@ fn update_input(model: Model, input: String) {
 fn update_gleam_code(model: Model) {
   let gleam_code =
     model.curl
-    |> curlify.to_gleam
+    |> gleam_code_gen.to_gleam(model.code_gen_options)
     |> result.map(prepend_imports)
     |> result.unwrap("panic as \"could not parse curl command\"")
 
@@ -169,7 +194,7 @@ fn update_gleam_code(model: Model) {
 }
 
 fn prepend_imports(code: String) {
-  "import gleam/http/request\nimport gleam/http\n\n" <> code
+  "import gleam/http/request\nimport gleam/http\nimport gleam/json\n\n" <> code
 }
 
 fn view(model: Model) {
@@ -230,12 +255,30 @@ fn view(model: Model) {
       ]),
     ]),
 
-    pre_box(
+    box(
       "Gleam HTTP request",
-      model.gleam_tokens
-        |> contour_to_lustre
-        |> element.fragment,
+      html.div([], [
+        html.pre([class("p-4 mb-2")], [
+          model.gleam_tokens
+          |> contour_to_lustre
+          |> element.fragment,
+        ]),
+
+        html.div([class("flex gap-4")], [
+          checkbox_option(
+            "Inline body",
+            model.code_gen_options.inline_body,
+            UserToggledInlineBody,
+          ),
+          checkbox_option(
+            "Parse JSON",
+            model.code_gen_options.parse_json,
+            UserToggledParseJson,
+          ),
+        ]),
+      ]),
     ),
+
     pre_box(
       "Multiline curl",
       model.curl
@@ -275,6 +318,20 @@ fn view(model: Model) {
   ])
 }
 
+fn checkbox_option(label: String, value: Bool, msg) -> element.Element(Msg) {
+  html.label(
+    [class("flex gap-2 items-center font-bold font-mono cursor-pointer")],
+    [
+      html.input([
+        attribute.type_("checkbox"),
+        attribute.checked(value),
+        event.on_check(msg),
+      ]),
+      html.text(label),
+    ],
+  )
+}
+
 fn top_bar_link(url, text) -> element.Element(Msg) {
   html.a(
     [
@@ -306,13 +363,20 @@ fn show_example_button(model: Model) -> element.Element(Msg) {
   )
 }
 
-fn pre_box(title: String, content) -> element.Element(Msg) {
+fn box(title: String, content) -> element.Element(Msg) {
   html.div([class("overflow-none")], [
     box_header(title),
+    content,
+  ])
+}
+
+fn pre_box(title: String, content) -> element.Element(Msg) {
+  box(
+    title,
     html.pre([class("p-4")], [
       content,
     ]),
-  ])
+  )
 }
 
 fn box_header(title: String) -> element.Element(Msg) {

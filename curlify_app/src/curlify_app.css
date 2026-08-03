@@ -31,6 +31,9 @@ pre {
   border: none;
   @apply bg-black/35;
 }
+input[type="checkbox"] {
+  accent-color: var(--bright-amber);
+}
 
 .btn {
   background-color: var(--amber-glow);

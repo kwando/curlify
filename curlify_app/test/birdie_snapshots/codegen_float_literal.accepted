@@ -1,0 +1,7 @@
+---
+version: 2.0.2
+title: codegen - float literal
+file: ./test/gleam_code_gen_test.gleam
+test_name: json_value_float_test
+---
+json.float(6.7)

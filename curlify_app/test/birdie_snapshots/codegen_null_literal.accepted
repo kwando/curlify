@@ -1,0 +1,7 @@
+---
+version: 2.0.2
+title: codegen - null literal
+file: ./test/gleam_code_gen_test.gleam
+test_name: json_value_null_test
+---
+json.null()

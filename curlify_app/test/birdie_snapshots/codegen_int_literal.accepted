@@ -1,0 +1,7 @@
+---
+version: 2.0.2
+title: codegen - int literal
+file: ./test/gleam_code_gen_test.gleam
+test_name: json_value_int_test
+---
+json.int(42)

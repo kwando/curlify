@@ -1,0 +1,5 @@
+---
+version: 2.0.2
+title: codegen - to_gleam - array with only strings
+---
+json.array(["wibble", "wobble"], json.string)

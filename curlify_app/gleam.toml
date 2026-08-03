@@ -19,9 +19,13 @@ lustre = ">= 5.7.1 and < 6.0.0"
 lustre_dev_tools = ">= 2.3.6 and < 3.0.0"
 curlify = { path = "../" }
 contour = ">= 1.2.1 and < 2.0.0"
+json_value = ">= 1.1.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+gleam_http = ">= 4.3.0 and < 5.0.0"
 
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
+birdie = ">= 2.0.2 and < 3.0.0"
 
 [tools.lustre.html]
 title = ">_ curlify"

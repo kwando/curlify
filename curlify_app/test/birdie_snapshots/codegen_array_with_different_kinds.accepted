@@ -1,0 +1,7 @@
+---
+version: 2.0.2
+title: codegen - array with different kinds
+file: ./test/gleam_code_gen_test.gleam
+test_name: json_value_array_with_different_kinds_test
+---
+json.preprocessed_array([json.int(23), json.bool(True)])
