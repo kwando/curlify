@@ -264,18 +264,7 @@ fn view(model: Model) {
           |> element.fragment,
         ]),
 
-        html.div([class("flex gap-4")], [
-          checkbox_option(
-            "Inline body",
-            model.code_gen_options.inline_body,
-            UserToggledInlineBody,
-          ),
-          checkbox_option(
-            "Parse JSON",
-            model.code_gen_options.parse_json,
-            UserToggledParseJson,
-          ),
-        ]),
+        codegen_options_view(model),
       ]),
     ),
 
@@ -318,7 +307,36 @@ fn view(model: Model) {
   ])
 }
 
-fn checkbox_option(label: String, value: Bool, msg) -> element.Element(Msg) {
+fn codegen_options_view(model: Model) -> element.Element(Msg) {
+  html.div([class("flex gap-4")], [
+    checkbox_option(
+      html.text("Inline body"),
+      model.code_gen_options.inline_body,
+      UserToggledInlineBody,
+    ),
+    checkbox_option(
+      element.fragment([
+        html.text("Body as "),
+        html.span(
+          [],
+          contour_to_lustre([
+            contour.Other("json"),
+            contour.Other("."),
+            contour.Variant("Json"),
+          ]),
+        ),
+      ]),
+      model.code_gen_options.parse_json,
+      UserToggledParseJson,
+    ),
+  ])
+}
+
+fn checkbox_option(
+  label: element.Element(Msg),
+  value: Bool,
+  msg: fn(Bool) -> Msg,
+) -> element.Element(Msg) {
   html.label(
     [class("flex gap-2 items-center font-bold font-mono cursor-pointer")],
     [
@@ -327,7 +345,7 @@ fn checkbox_option(label: String, value: Bool, msg) -> element.Element(Msg) {
         attribute.checked(value),
         event.on_check(msg),
       ]),
-      html.text(label),
+      label,
     ],
   )
 }
@@ -390,7 +408,7 @@ fn prompt_element() -> element.Element(Msg) {
   html.span([class("text-amber-500 prompt")], [html.text(">_ ")])
 }
 
-fn contour_to_lustre(tokens: List(contour.Token)) {
+fn contour_to_lustre(tokens: List(contour.Token)) -> List(element.Element(a)) {
   list.map(tokens, fn(token) {
     case token {
       contour.Whitespace(txt) -> html.text(txt)
