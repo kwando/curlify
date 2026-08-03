@@ -52,7 +52,12 @@ pub fn to_gleam_with_json_body_test() {
     curlify.from_url("https://gleam.run/")
     |> curlify.set_body(
       curlify.Json(
-        json.to_string(json.object([#("lucy", json.string("lucy"))])),
+        json.to_string(
+          json.object([
+            #("lucy", json.string("lucy")),
+            #("tags", json.array(["wibble", "wobble"], json.string)),
+          ]),
+        ),
       ),
     )
     |> gleam_code_gen.to_gleam(gleam_code_gen.Options(

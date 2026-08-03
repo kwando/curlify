@@ -5,7 +5,7 @@ file: ./test/gleam_code_gen_test.gleam
 test_name: to_gleam_with_json_body_test
 ---
 let assert Ok(req) = request.to("https://gleam.run/")
-let body = json.object([#("lucy", json.string("lucy"))]) |> json.to_string
+let body = json.object([#("tags", json.array(["wibble", "wobble"], json.string)), #("lucy", json.string("lucy"))]) |> json.to_string
 
 req
 |> request.set_header("content-type", "application/json")

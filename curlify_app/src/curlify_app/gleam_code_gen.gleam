@@ -177,9 +177,9 @@ pub fn json_value_to_json_string(value: json_value.JsonValue) -> String {
             <> gleam_escape(key)
             <> ", "
             <> json_value_to_json_string(value)
-            <> "),"
+            <> "), "
           })
-          |> string.remove_suffix(",")
+          |> string.remove_suffix(", ")
           <> "])"
       }
     }
