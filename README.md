@@ -1,7 +1,7 @@
 # curlify
 
 [![Package Version](https://img.shields.io/hexpm/v/curlify)](https://hex.pm/packages/curlify)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/curlify`/)`
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://curlify.hexdocs.pm/)
 
 Utilitys for generating `curl` commands. Use the builder api, convert a `gleam_http` request or
 parse a curl command line string.
