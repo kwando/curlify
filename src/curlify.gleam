@@ -59,6 +59,7 @@ pub type Curl {
     compressed: Bool,
     timeout: Int,
     basic_auth: Option(#(String, String)),
+    user_agent: Option(String),
   )
 }
 
@@ -80,6 +81,7 @@ pub fn from_request(req: request.Request(String)) -> Curl {
   }
 
   let #(basic_auth, headers) = extract_basic_auth(req.headers)
+  let #(user_agent, headers) = extract_user_agent(headers)
 
   Curl(
     method: req.method,
@@ -92,6 +94,7 @@ pub fn from_request(req: request.Request(String)) -> Curl {
     compressed: False,
     timeout: 0,
     basic_auth: basic_auth,
+    user_agent: user_agent,
   )
 }
 
@@ -109,6 +112,7 @@ pub fn from_url(url: String) -> Curl {
     compressed: False,
     timeout: 0,
     basic_auth: None,
+    user_agent: None,
   )
 }
 
@@ -144,6 +148,17 @@ fn extract_basic_auth(
         False -> #(None, headers)
       }
     }
+    Error(_) -> #(None, headers)
+  }
+}
+
+/// If the headers contain a `user-agent` entry, extract it into
+/// the `user_agent` field and remove the header from the list.
+fn extract_user_agent(
+  headers: List(http.Header),
+) -> #(Option(String), List(http.Header)) {
+  case list.key_pop(headers, "user-agent") {
+    Ok(#(value, filtered)) -> #(Some(value), filtered)
     Error(_) -> #(None, headers)
   }
 }
@@ -187,6 +202,11 @@ pub fn set_timeout(curl: Curl, seconds: Int) -> Curl {
 /// Set HTTP basic authentication credentials (`-u username:password`).
 pub fn set_basic_auth(curl: Curl, username: String, password: String) -> Curl {
   Curl(..curl, basic_auth: Some(#(username, password)))
+}
+
+/// Set a custom User-Agent header (`-A` / `--user-agent`).
+pub fn set_user_agent(curl: Curl, agent: String) -> Curl {
+  Curl(..curl, user_agent: Some(agent))
 }
 
 /// Set a header on a Curl. Replaces any existing header with the same key.
@@ -301,6 +321,10 @@ fn to_arguments(
     case curl.basic_auth {
       None -> []
       Some(#(u, p)) -> [string_flag("--user", shell_escape(u <> ":" <> p))]
+    },
+    case curl.user_agent {
+      None -> []
+      Some(agent) -> [string_flag("--user-agent", shell_escape(agent))]
     },
     [bool_flag("--insecure", curl.insecure)],
     [bool_flag("--compressed", curl.compressed)],
@@ -442,6 +466,11 @@ pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
     }
   }
 
+  let req = case curl.user_agent {
+    None -> req
+    Some(agent) -> request.set_header(req, "user-agent", agent)
+  }
+
   let req =
     list.fold(curl.headers, req, fn(req, header) {
       let #(key, value) = header
@@ -571,6 +600,7 @@ fn parse_args(tokens: List(String)) -> Result(Curl, CurlParseError) {
       compressed: False,
       timeout: 0,
       basic_auth: None,
+      user_agent: None,
     )
 
   use #(curl, positional) <- result.try(parse_args_loop(
@@ -711,6 +741,14 @@ fn parse_args_loop(
       }
     }
 
+    ["-A", value, ..rest] | ["--user-agent", value, ..rest] ->
+      parse_args_loop(
+        rest,
+        Curl(..curl, user_agent: Some(value)),
+        positional,
+        method_explicit,
+      )
+
     ["-u", value, ..rest] | ["--user", value, ..rest] -> {
       let basic_auth = case string.split_once(value, ":") {
         Ok(#(u, p)) -> Some(#(u, p))
@@ -756,7 +794,8 @@ fn infer_method(method_explicit: Bool, current: http.Method) -> http.Method {
 /// - -k/--insecure
 /// - --compressed
 /// - --max-time
-/// - -u/--user.
+/// - -u/--user
+/// - -A/--user-agent.
 ///
 /// Unsupported flags are silently dropped.
 /// Returns `Error(BadTimeoutValue)` if `--max-time` is not a valid integer.

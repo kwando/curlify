@@ -100,7 +100,7 @@ curlify.from_request(req)
 
 ## Supported curl flags for parsing
 
-`-X`/`--request`, `-H`/`--header`, `-d`/`--data`, `--data-raw`, `--data-binary`, `--json`, `--data-urlencode`, `-L`/`--location`, `-v`/`--verbose`, `-k`/`--insecure`, `--compressed`, `--max-time`, `-u`/`--user`.
+`-X`/`--request`, `-H`/`--header`, `-d`/`--data`, `--data-raw`, `--data-binary`, `--json`, `--data-urlencode`, `-L`/`--location`, `-v`/`--verbose`, `-k`/`--insecure`, `--compressed`, `--max-time`, `-u`/`--user`, `-A`/`--user-agent`.
 
 Unsupported flags are silently dropped.
 

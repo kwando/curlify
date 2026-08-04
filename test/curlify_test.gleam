@@ -56,6 +56,17 @@ pub fn from_request_with_no_content_type_header_test() {
   assert curlify.body == curlify.Text("{\"name\": \"test\"}")
 }
 
+pub fn from_request_with_user_agent_test() {
+  let assert Ok(req) = request.to("https://api.example.com/data")
+  let req = req |> request.set_header("user-agent", "MyApp/1.0")
+
+  let curlify = curlify.from_request(req)
+
+  assert curlify.user_agent == Some("MyApp/1.0")
+  // The user-agent header should be removed from headers
+  assert curlify.headers == []
+}
+
 pub fn from_request_with_basic_auth_test() {
   let assert Ok(req) = request.to("https://api.example.com/data")
   let req =
@@ -443,6 +454,7 @@ pub fn to_request_invalid_url_test() {
       compressed: False,
       timeout: 0,
       basic_auth: None,
+      user_agent: None,
     )
 
   let assert Error(_) = curlify.to_request(bad)
@@ -588,6 +600,28 @@ pub fn parse_curl_basic_auth_test() {
   let assert Ok(result) =
     curlify.parse("curl -u 'admin:secret' 'https://api.example.com'")
   assert result.basic_auth == Some(#("admin", "secret"))
+}
+
+pub fn parse_curl_user_agent_test() {
+  let assert Ok(result) =
+    curlify.parse("curl -A 'MyApp/1.0' 'https://example.com'")
+
+  assert result.user_agent == Some("MyApp/1.0")
+}
+
+pub fn parse_curl_user_agent_long_flag_test() {
+  let assert Ok(result) =
+    curlify.parse("curl --user-agent 'MyApp/1.0' 'https://example.com'")
+
+  assert result.user_agent == Some("MyApp/1.0")
+}
+
+pub fn parse_curl_user_agent_and_header_test() {
+  let assert Ok(result) =
+    curlify.parse("curl -A 'foo' -H 'user-agent: bar' 'https://example.com'")
+
+  assert result.user_agent == Some("foo")
+  assert result.headers == [#("user-agent", "bar")]
 }
 
 pub fn parse_curl_tokenizer_embedded_quote_test() {
@@ -743,6 +777,25 @@ pub fn to_args_form_test() {
       "age=30",
       "https://api.example.com/submit",
     ]
+}
+
+pub fn to_string_with_user_agent_test() {
+  let result =
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_user_agent("MyApp/1.0")
+    |> curlify.to_string()
+
+  assert result
+    == "curl --user-agent 'MyApp/1.0' 'https://api.example.com/data'"
+}
+
+pub fn to_request_sets_user_agent_header_test() {
+  let assert Ok(request) =
+    curlify.from_url("https://api.example.com/data")
+    |> curlify.set_user_agent("MyApp/1.0")
+    |> curlify.to_request()
+
+  let assert ["MyApp/1.0"] = list.key_filter(request.headers, "user-agent")
 }
 
 pub fn http_method_is_escaped_test() {
