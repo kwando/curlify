@@ -59,7 +59,6 @@ pub type Curl {
     compressed: Bool,
     timeout: Int,
     basic_auth: Option(#(String, String)),
-    user_agent: Option(String),
   )
 }
 
@@ -81,7 +80,6 @@ pub fn from_request(req: request.Request(String)) -> Curl {
   }
 
   let #(basic_auth, headers) = extract_basic_auth(req.headers)
-  let #(user_agent, headers) = extract_user_agent(headers)
 
   Curl(
     method: req.method,
@@ -94,7 +92,6 @@ pub fn from_request(req: request.Request(String)) -> Curl {
     compressed: False,
     timeout: 0,
     basic_auth: basic_auth,
-    user_agent: user_agent,
   )
 }
 
@@ -112,7 +109,6 @@ pub fn from_url(url: String) -> Curl {
     compressed: False,
     timeout: 0,
     basic_auth: None,
-    user_agent: None,
   )
 }
 
@@ -206,7 +202,7 @@ pub fn set_basic_auth(curl: Curl, username: String, password: String) -> Curl {
 
 /// Set a custom User-Agent header (`-A` / `--user-agent`).
 pub fn set_user_agent(curl: Curl, agent: String) -> Curl {
-  Curl(..curl, user_agent: Some(agent))
+  set_header(curl, "user-agent", agent)
 }
 
 /// Set a header on a Curl. Replaces any existing header with the same key.
@@ -288,6 +284,7 @@ fn to_arguments(
   curl: Curl,
   shell_escape: fn(String) -> String,
 ) -> List(List(String)) {
+  let #(user_agent, headers) = extract_user_agent(curl.headers)
   [
     [
       flag_if(
@@ -300,7 +297,9 @@ fn to_arguments(
     ],
 
     {
-      use header <- list.map(headers_without_json_content_type(curl))
+      use header <- list.map(headers_without_json_content_type(
+        Curl(..curl, headers:),
+      ))
       string_flag("-H", shell_escape(header.0 <> ": " <> header.1))
     },
 
@@ -322,7 +321,7 @@ fn to_arguments(
       None -> []
       Some(#(u, p)) -> [string_flag("--user", shell_escape(u <> ":" <> p))]
     },
-    case curl.user_agent {
+    case user_agent {
       None -> []
       Some(agent) -> [string_flag("--user-agent", shell_escape(agent))]
     },
@@ -466,11 +465,6 @@ pub fn to_request(curl: Curl) -> Result(request.Request(String), Nil) {
     }
   }
 
-  let req = case curl.user_agent {
-    None -> req
-    Some(agent) -> request.set_header(req, "user-agent", agent)
-  }
-
   let req =
     list.fold(curl.headers, req, fn(req, header) {
       let #(key, value) = header
@@ -600,7 +594,6 @@ fn parse_args(tokens: List(String)) -> Result(Curl, CurlParseError) {
       compressed: False,
       timeout: 0,
       basic_auth: None,
-      user_agent: None,
     )
 
   use #(curl, positional) <- result.try(parse_args_loop(
@@ -616,7 +609,7 @@ fn parse_args(tokens: List(String)) -> Result(Curl, CurlParseError) {
   }
   use url <- result.try(url)
 
-  Ok(Curl(..curl, url: url, headers: list.reverse(curl.headers)))
+  Ok(Curl(..curl, url: url, headers: curl.headers))
 }
 
 /// Recursive token walker. `method_explicit` tracks whether `-X`/`--request`
@@ -645,7 +638,7 @@ fn parse_args_loop(
       }
       parse_args_loop(
         rest,
-        Curl(..curl, headers: [header, ..curl.headers]),
+        set_header(curl, header.0, header.1),
         positional,
         method_explicit,
       )
@@ -744,7 +737,7 @@ fn parse_args_loop(
     ["-A", value, ..rest] | ["--user-agent", value, ..rest] ->
       parse_args_loop(
         rest,
-        Curl(..curl, user_agent: Some(value)),
+        curl |> set_header("user-agent", value),
         positional,
         method_explicit,
       )
